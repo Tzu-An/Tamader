@@ -1,0 +1,7 @@
+{
+    "env": "local",
+    "logging_level": "INFO",
+    "rest_api_worker_number": 3,
+    "rest_api_port": 5000,
+    "max_content_length": 1024
+}

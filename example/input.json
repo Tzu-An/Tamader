@@ -1,0 +1,1 @@
+{"solver": "BFGS", "distribution": "normal", "sample_size": 10, "mean": 1.0, "std": 5.0, "boundary": [-5, 7]}

@@ -1,6 +1,7 @@
 """This is a tool generating a sample set, which its statistics are exactly the parameters of its distribution.
    Also the maximum and minimum values can be fixed.
 """
+import os
 import numpy as np
 from sklearn.cluster import KMeans
 from scipy.optimize import minimize, Bounds
@@ -34,9 +35,10 @@ BOUNDARY_SOLVER = [
 
 class Tamader:
     """"""
-    def __init__(self, solver='BFGS', max_retry=10):
-        self.solver = solver
-        self.max_retry = max_retry
+    def __init__(self, **kwargs):
+        self.logger = kwargs["logger"]
+        self.max_retry = kwargs.get("max_retry", 10)
+        self.logger.info("Tamader set")
 
     @property
     def solver(self):
@@ -46,8 +48,7 @@ class Tamader:
     def solver(self, method):
         if method not in SOLVER:
             raise ValueError(
-                """Valid solvers:
-                {}""".format(SOLVER))
+                "Valid solvers: {}".format(SOLVER))
         self.__solver = method
 
     @property
@@ -77,9 +78,7 @@ class Tamader:
 
         if lb >= ub:
             raise ValueError(
-                """Invalid boundary condition:
-                lower bound = {}
-                upper bound = {}""".format(lb, ub)
+                f"Invalid boundary condition: lower bound = {lb}, upper bound = {ub}"
             )
         lb = max(lb, distribution["domain"][0])
         ub = min(ub, distribution["domain"][1])
@@ -95,6 +94,7 @@ class Tamader:
                 3. Initialize and validate boundary
                 4. Adjust parameters and other conditions based on boundary
                 5. Validate parameters again after adjustment
+                6. Set solver
             Args:
                 kwargs (dict): Original request.
             Returns:
@@ -139,6 +139,12 @@ class Tamader:
 
             self._validate_parameters(ret)
 
+        solver = kwargs.get("solver", SOLVER[0])
+        if solver not in SOLVER:
+            self.logger.warning(f"Invalid Solver {solver}. {SOLVER[0]} has been chosen.")
+            solver = SOLVER[0]
+        ret["solver"] = solver
+
         return ret
 
     def _validate_conditions(self, kwargs):
@@ -151,10 +157,7 @@ class Tamader:
 
         if kwargs["distribution"] not in DIST:
                         raise ValueError(
-                """
-                Invalid distribution.
-                Available distributions are: {}
-                """.format([dist for dist in DIST.keys()])
+                "Invalid distribution. Available distributions are: {}".format([dist for dist in DIST.keys()])
             )
 
     def _validate_parameters(self, kwargs):
@@ -173,20 +176,20 @@ class Tamader:
 
         for parameter in kwargs["distribution"]["parameters"]:
             if parameter not in kwargs:
-                raise ValueError("Parameter {0} is missing.".format(parameter))
+                raise ValueError(f"Parameter {parameter} is missing.")
             inp = kwargs[parameter]
             conditions = kwargs["distribution"]["parameters"][parameter]
             dtype = conditions[0]
             if not isinstance(inp, dtype):
                 raise TypeError(
-                    """Parameter {0} should be a {1}.
-                    Currently, it is a {2}.""".format(parameter, dtype, type(inp))
+                    f"Parameter {parameter} should be a {dtype}. Currently, it is a {type(inp)}."
                 )
             if len(conditions) == 2:
                 cond = conditions[1]
                 if not match_condition(inp, cond):
                     raise ValueError(
-                        "Parameter {0} = {2} should be {1}".format(parameter, cond, inp))
+                        f"Parameter {parameter} = {inp} should be {cond}"
+                    )
 
         return kwargs
 
@@ -240,13 +243,14 @@ class Tamader:
             "fun": self._get_target_function(obj),
             "x0": samples,
             "tol": 1e-6,
-            "method": self.solver
+            "method": obj["solver"]
         }
 
         if "boundary" in obj:
-            if self.solver not in BOUNDARY_SOLVER:
+            if obj["solver"] not in BOUNDARY_SOLVER:
                 payload["method"] = "L-BFGS-B"
-                print("Solver L-BFGS-B is selected for boundary conditions.")
+                self.logger.warning("Solver L-BFGS-B is selected for boundary conditions.")
+
             lb, ub = obj["boundary"]
             lb = lb * 0.999 if lb != float("-inf") else lb
             ub = ub * 0.999 if ub != float("inf") else ub
@@ -288,7 +292,7 @@ class Tamader:
         success, ret = self._optimize_vector(payload)
 
         if not success:
-            print("Warning: Failed to find feasible solution.") #Introduce logger later
+            self.logger.warning("Failed to find feasible solution.")
             return
 
         if "boundary" in obj:
@@ -316,7 +320,15 @@ class Tamader:
         return output
 
 if __name__ == '__main__':
-    agent = Tamader(solver="Nelder-Mead")
+    import sys
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
+    import scripts.common as common
+
+    config = common.get_config(test=True)
+    logger = common.get_logger(__name__)
+    common.set_logger_level(logger, config['logging_level'])
+
+    agent = Tamader(logger=logger)
     outcome = agent.process(distribution="normal", mean=1.0, std=4.0, sample_size=5, boundary=[-4, float("inf")])
     if outcome is None:
         print("Failed to find a feasible solution.")
