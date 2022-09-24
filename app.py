@@ -1,5 +1,5 @@
 """An asynchronous MP Quart server for Tamader"""
-import os, sys
+import os
 import psutil
 import logging
 import traceback

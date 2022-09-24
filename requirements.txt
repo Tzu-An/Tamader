@@ -1,0 +1,7 @@
+cognite-processpool==0.5.0
+quart==0.18.0
+hypercorn==0.14.3
+requests
+psutil
+scikit-learn
+numpy
