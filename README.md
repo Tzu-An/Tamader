@@ -50,6 +50,11 @@ outcome = agent.process(
 ```!#/bin/bash
 python app.py
 ```
+- Or deploy with docker
+```!#/bin/bash
+docker build -t tamader:your_tag . # If image wasn't built
+docker run --name container_name -p 5000:5000 -d tamader:your_tag
+```
 - Curl!
 ```!#/bin/bash
 curl localhost:5000/calculate -X POST -H 'Content-Type: application/json' -d @'example/input.json' | python -m json.tool

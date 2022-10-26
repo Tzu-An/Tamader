@@ -2,8 +2,7 @@
 import os
 import psutil
 import logging
-import traceback
-import json
+import traceback 
 import multiprocessing
 import asyncio
 
@@ -113,7 +112,7 @@ async def calculate():
         logger.error(tb)
         ret = {"error": err.__class__.__name__}
 
-    return json.dumps(ret)
+    return ret
 
 def main():
     """Main function
