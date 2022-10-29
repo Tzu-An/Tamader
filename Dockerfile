@@ -1,6 +1,6 @@
 FROM python:3.8-bullseye
 
-RUN apt-get update
+RUN apt-get update && apt-get upgrade
 RUN mkdir -p /home/app
 ENV ENV_VAR=prod
 
